@@ -1,4 +1,4 @@
-import React, { Component } from 'react';
+import React, { Component, Fragment } from 'react';
 import { Text, View, Dimensions, TouchableWithoutFeedback, PanResponder } from 'react-native';
 
 
@@ -24,7 +24,9 @@ export default class ReactNativePopupBase extends Component {
         this._panResponderPopupContainer = PanResponder.create({
             onStartShouldSetPanResponder: (evt, gestureState) => true,
             onPanResponderRelease: (evt, gestureState) => {
-                this.onPopupOutsidePressed();
+                if (this.state.showPopup) {
+                    this.onPopupOutsidePressed();
+                }
             },
         });
 
@@ -36,18 +38,20 @@ export default class ReactNativePopupBase extends Component {
 
     componentDidMount() {
         setTimeout(() => {
-            this.containerRef.measure((width, height, px, py, fx, fy) => {
-                this.setState({
-                    pageOffsetX: fx,
-                    pageOffsetY: fy,
-                })
-            })
-        }, 100);
+            
+        }, 200);
     }
 
 
     onButtonPressed(event) {
-        this.setState({ showPopup: true, });
+        this.containerRef.measure((width, height, px, py, fx, fy) => {
+            console.log(fx, fy);
+            this.setState({
+                pageOffsetX: fx,
+                pageOffsetY: fy,
+                showPopup: true,
+            })
+        });
     }
 
     onPopupOutsidePressed() {
@@ -60,39 +64,42 @@ export default class ReactNativePopupBase extends Component {
         const { pageOffsetX, pageOffsetY, showPopup } = this.state;
 
         return (
-            <View style={{ position: 'relative', }} ref={(instance) => this.containerRef = instance}>
+            <View 
+                style={{
+                    position: 'relative',
+                    height: showPopup ? deviceHeight : 'auto',
+                    width: showPopup ? deviceWidth : 'auto',
+                    top: showPopup ? -pageOffsetY : 0,
+                    left: showPopup ? -pageOffsetX : 0,
+                    backgroundColor: 'yellow',
+                }}
+                ref={(instance) => this.containerRef = instance}
+                { ...this._panResponderPopupContainer.panHandlers }
+            >
                 {/* Background container: width = deviceWidth, height = deviceHeight, position: fixed, top = 0, left = 0 */}
                 {showPopup && (
-                    <View
-                        style={{
-                            width: deviceWidth,
-                            height: deviceHeight,
-                            position: 'absolute',
-                            top: -pageOffsetY,
-                            left: -pageOffsetX,
-                            backgroundColor: 'transparent',
-                        }}
-                        { ...this._panResponderPopupContainer.panHandlers }
-                    >
+                    <Fragment>
                         <View
                             style={{
-                                position: 'relative',
+                                position: 'absolute',
                                 top: pageOffsetY,
                                 left: pageOffsetX,
-                                backgroundColor: 'red',
-                                width: 200,
-                                height: 200,
                             }}
                             { ...this._panResponderPopup.panHandlers }
                         >
+                            <TouchableWithoutFeedback onPress={ this.onButtonPressed }>
+                                <View>{ children }</View>
+                            </TouchableWithoutFeedback>
                             <Text>popup content</Text>
                         </View>
-                    </View>
+                    </Fragment>
                 )}
 
-                <TouchableWithoutFeedback onPress={ this.onButtonPressed }>
-                    <View>{ children }</View>
-                </TouchableWithoutFeedback>
+                {!showPopup && (
+                    <TouchableWithoutFeedback onPress={ this.onButtonPressed }>
+                        <View>{ children }</View>
+                    </TouchableWithoutFeedback>
+                )}
             </View>
         );
     }
